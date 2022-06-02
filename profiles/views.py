@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import ProfileSerializer
 from .models import Profile
+from drf_api.permissions import IsOwnerOrReadOnly
 
 
 class ProfileList(APIView):
@@ -13,12 +14,19 @@ class ProfileList(APIView):
     """
     def get(self, request):
         profiles = Profile.objects.all()
-        serializer = ProfileSerializer(profiles, many=True)
+        serializer = ProfileSerializer(profiles, many=True, context={'request': request})
         return Response(serializer.data)
 
 
 class ProfileDetail(APIView):
+    """
+    Displays a url-specified profile and grants CRUD access
+    only if the request user id matches the profile id
+    authentication handled by REST custom permissions
+    """
     serializer_class = ProfileSerializer
+    permission_classes = [IsOwnerOrReadOnly]
+
     def get_object(self, pk):
         try:
             profile = Profile.objects.get(pk=pk)
@@ -28,12 +36,17 @@ class ProfileDetail(APIView):
 
     def get(self, request, pk):
         profile = self.get_object(pk=pk)
-        serializer = ProfileSerializer(profile)
+        serializer = ProfileSerializer(profile, context={'request': request})
         return Response(serializer.data)
 
     def put(self, request, pk):
         profile = self.get_object(pk=pk)
-        serializer = ProfileSerializer(profile, data=request.data)
+        self.check_object_permissions(self.request, profile)
+        serializer = ProfileSerializer(
+            profile,
+            data=request.data,
+            context={'request': request}
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
