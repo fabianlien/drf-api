@@ -31,7 +31,7 @@ class ProfileDetail(APIView):
         try:
             profile = Profile.objects.get(pk=pk)
             return profile
-        except Profile.DoesNotExist:
+        except Profile.DoesNotExist():
             raise Http404
 
     def get(self, request, pk):
